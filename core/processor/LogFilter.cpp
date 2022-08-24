@@ -151,29 +151,24 @@ bool LogFilter::IsMatched(const Log& log, const LogFilterRule& rule, const LogGr
     const std::vector<boost::regex> regs = rule.FilterRegs;
     string exception;
     for (uint32_t i = 0; i < keys.size(); i++) {
-        bool found = false;
         for (int j = 0; j < log.contents_size(); j++) {
             const Log_Content& content = log.contents(j);
             const string& key = content.key();
             const string& value = content.value();
             if (key == keys[i]) {
-                found = true;
                 exception.clear();
-                if (!BoostRegexMatch(value.c_str(), regs[i], exception)) {
-                    if (!exception.empty()) {
-                        LOG_ERROR(sLogger, ("regex_match in Filter fail", exception));
+                if (BoostRegexMatch(value.c_str(), regs[i], exception)) {
+                    return false;
+                } else if (!exception.empty()) {
+                    LOG_ERROR(sLogger, ("regex_match in Filter fail", exception));
 
-                        if (LogtailAlarm::GetInstance()->IsLowLevelAlarmValid()) {
-                            context.SendAlarm(REGEX_MATCH_ALARM, "regex_match in Filter fail:" + exception);
-                        }
+                    if (LogtailAlarm::GetInstance()->IsLowLevelAlarmValid()) {
+                        context.SendAlarm(REGEX_MATCH_ALARM, "regex_match in Filter fail:" + exception);
                     }
                     return false;
                 }
                 break;
             }
-        }
-        if (false == found) {
-            return false;
         }
     }
     return true;
